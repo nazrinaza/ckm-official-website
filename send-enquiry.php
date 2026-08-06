@@ -19,7 +19,7 @@ $toEmail = $config['ENQUIRY_TO_EMAIL'] ?? getenv('ENQUIRY_TO_EMAIL') ?: '';
 
 if ($apiKey === '' || !filter_var($fromEmail, FILTER_VALIDATE_EMAIL) || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
     http_response_code(503);
-    echo json_encode(['message' => 'Borang belum dikonfigurasi. Sila hubungi pihak NAQI secara terus.']);
+    echo json_encode(['message' => 'Borang belum dikonfigurasi. Sila hubungi pihak cucikarpetmasjid.com secara terus.']);
     exit;
 }
 
@@ -56,9 +56,9 @@ if ($name === '' || $phone === '' || $premise === '' || $premiseType === '' ||
 $safe = static fn(string $value): string =>
     htmlspecialchars($value !== '' ? $value : 'Tidak dinyatakan', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-$subject = 'Enquiry Lawatan Tapak NAQI — ' . $premise;
+$subject = 'Enquiry Lawatan Tapak cucikarpetmasjid.com — ' . $premise;
 $html = '
-<h2>Permohonan Lawatan Tapak NAQI</h2>
+<h2>Permohonan Lawatan Tapak cucikarpetmasjid.com</h2>
 <table cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-family:Arial,sans-serif">
   <tr><td><strong>Nama</strong></td><td>' . $safe($name) . '</td></tr>
   <tr><td><strong>WhatsApp</strong></td><td>' . $safe($phone) . '</td></tr>
@@ -76,8 +76,8 @@ $payload = [
         'to' => [['email' => $toEmail]],
         'subject' => $subject,
     ]],
-    'from' => ['email' => $fromEmail, 'name' => 'NAQI Website'],
-    'reply_to' => ['email' => $fromEmail, 'name' => 'NAQI Cleaning Services'],
+    'from' => ['email' => $fromEmail, 'name' => 'cucikarpetmasjid.com'],
+    'reply_to' => ['email' => $fromEmail, 'name' => 'cucikarpetmasjid.com'],
     'content' => [['type' => 'text/html', 'value' => $html]],
 ];
 
@@ -99,7 +99,7 @@ $curlError = curl_error($curl);
 curl_close($curl);
 
 if ($response === false || $curlError !== '' || $statusCode < 200 || $statusCode >= 300) {
-    error_log('NAQI SendGrid error. HTTP ' . $statusCode . ' ' . $curlError);
+    error_log('cucikarpetmasjid.com SendGrid error. HTTP ' . $statusCode . ' ' . $curlError);
     http_response_code(502);
     echo json_encode(['message' => 'Permohonan tidak dapat dihantar sekarang. Sila cuba lagi sebentar.']);
     exit;
