@@ -24,7 +24,7 @@ if ($enquiryId) {
             'client_phone'   => $e['phone'],
             'client_address' => $e['location'],
             'premise'        => $e['premise'],
-            'service_desc'   => $e['issue'] . ' — ' . $e['premise_type'] . ($e['area'] ? ' (' . $e['area'] . ')' : ''),
+            'service_desc'   => $e['issue'] . ' — ' . $e['premise_type'] . ($e['area'] ? ' (' . $e['area'] . ' sq/ft)' : ''),
             'enquiry_id'     => $enquiryId,
             'client_email'   => $e['email'] ?? '',
         ];
