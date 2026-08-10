@@ -65,13 +65,14 @@ include __DIR__ . '/header.php';
   <?php else: ?>
   <table>
     <thead>
-      <tr><th>Rujukan</th><th>Nama</th><th>WhatsApp</th><th>Premis</th><th>Lokasi</th><th>Status</th><th>Tarikh</th><th></th></tr>
+      <tr><th>Rujukan</th><th>Nama</th><th>Email</th><th>WhatsApp</th><th>Premis</th><th>Lokasi</th><th>Status</th><th>Tarikh</th><th></th></tr>
     </thead>
     <tbody>
       <?php foreach ($enquiries as $e): ?>
       <tr>
         <td><strong><?= htmlspecialchars($e['ref_no']) ?></strong></td>
         <td><?= htmlspecialchars($e['name']) ?></td>
+        <td><?= $e['email'] ? htmlspecialchars($e['email']) : '<span style="color:#adb5bd">-</span>' ?></td>
         <td><?= htmlspecialchars($e['phone']) ?></td>
         <td><?= htmlspecialchars($e['premise']) ?></td>
         <td><?= htmlspecialchars($e['location']) ?></td>
