@@ -12,7 +12,7 @@ $admin = current_admin();
 
 // Load from enquiry if provided
 $enquiryId = (int)($_GET['enquiry_id'] ?? 0);
-$prefill = ['client_name'=>'','client_phone'=>'','client_address'=>'','premise'=>'','service_desc'=>'','enquiry_id'=>null];
+$prefill = ['client_name'=>'','client_phone'=>'','client_address'=>'','premise'=>'','service_desc'=>'','enquiry_id'=>null,'client_email'=>''];
 
 if ($enquiryId) {
     $stmt = $pdo->prepare("SELECT * FROM enquiries WHERE id = ?");
@@ -26,6 +26,7 @@ if ($enquiryId) {
             'premise'        => $e['premise'],
             'service_desc'   => $e['issue'] . ' — ' . $e['premise_type'] . ($e['area'] ? ' (' . $e['area'] . ')' : ''),
             'enquiry_id'     => $enquiryId,
+            'client_email'   => $e['email'] ?? '',
         ];
     }
 }
