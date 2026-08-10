@@ -90,27 +90,22 @@ try {
     error_log('CKM DB error: ' . $e->getMessage());
 }
 
-/* ── Send emails via PHP mail() (cPanel Exim MTA) ── */
-/* Note: Hosting intercepts outbound SMTP (port 25/587 -> local Exim),
-   so direct Zoho SMTP is impossible. PHP mail() via Exim is the only option.
-   Requires SPF record to include server IP 103.191.76.66. */
+/* ── Send emails via Resend API (HTTP port 443 — bypasses hosting SMTP block) ── */
+/* Requires RESEND_API_KEY in config.php and domain verified at resend.com */
 $adminEmailSent = false;
 $ackEmailSent   = false;
 
-if ($smtpUser !== '' && filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+$resendKey = $config['RESEND_API_KEY'] ?? '';
+$resendFromEmail = $config['RESEND_FROM_EMAIL'] ?? $smtpUser;
+$resendFromName  = $config['RESEND_FROM_NAME'] ?? $fromName;
+
+if ($resendKey !== '' && filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+
+    require_once __DIR__ . '/resend.php';
+    $resend = new CkmResend($resendKey, $resendFromEmail, $resendFromName);
 
     $safe = static fn(string $value): string =>
         htmlspecialchars($value !== '' ? $value : 'Tidak dinyatakan', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-
-    $mailHeaders = [
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        'From: ' . $fromName . ' <' . $smtpUser . '>',
-        'Reply-To: ' . $fromName . ' <' . $smtpUser . '>',
-        'X-Mailer: CKM-Website/1.0',
-    ];
-    $headerStr = implode("\r\n", $mailHeaders);
-    $envelopeSender = '-f ' . $smtpUser;
 
     /* ── Email 1: Notification to CKM admin ── */
     $adminSubject = 'Enquiry Lawatan Tapak cucikarpetmasjid.com — ' . $premise;
@@ -130,10 +125,9 @@ if ($smtpUser !== '' && filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
   <tr><td><strong>Catatan</strong></td><td>' . nl2br($safe($message)) . '</td></tr>
 </table>';
 
-    $encodedAdminSub = '=?UTF-8?B?' . base64_encode($adminSubject) . '?=';
-    $adminEmailSent = @mail($toEmail, $encodedAdminSub, $adminHtml, $headerStr, $envelopeSender);
+    $adminEmailSent = $resend->send($toEmail, $adminSubject, $adminHtml);
     if (!$adminEmailSent) {
-        error_log('CKM mail() admin email failed: ' . (error_get_last()['message'] ?? 'unknown'));
+        error_log('CKM Resend admin email error: ' . $resend->getError());
     }
 
     /* ── Email 2: Acknowledgement to customer (if email provided) ── */
@@ -163,10 +157,9 @@ if ($smtpUser !== '' && filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
   </div>
 </div>';
 
-        $encodedAckSub = '=?UTF-8?B?' . base64_encode($ackSubject) . '?=';
-        $ackEmailSent = @mail($email, $encodedAckSub, $ackHtml, $headerStr, $envelopeSender);
+        $ackEmailSent = $resend->send($email, $ackSubject, $ackHtml);
         if (!$ackEmailSent) {
-            error_log('CKM mail() ack email failed: ' . (error_get_last()['message'] ?? 'unknown'));
+            error_log('CKM Resend ack email error: ' . $resend->getError());
         }
     }
 }
