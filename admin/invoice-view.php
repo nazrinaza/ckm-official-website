@@ -160,7 +160,7 @@ include __DIR__ . '/header.php';
       <?= htmlspecialchars($company['phone']) ?>
     </div>
     <div style="text-align:right">
-      <div style="font-size:13px;text-transform:uppercase;color:#999;margin-bottom:5px">Ditagihkan Kepada</div>
+      <div style="font-size:13px;text-transform:uppercase;color:#999;margin-bottom:5px">Diinvoicekan Kepada</div>
       <strong><?= htmlspecialchars($inv['client_name']) ?></strong><br>
       <?php if (!empty($inv['client_email'])): ?><?= htmlspecialchars($inv['client_email']) ?><br><?php endif; ?>
       <?= htmlspecialchars($inv['client_phone']) ?><br>
