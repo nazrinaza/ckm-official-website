@@ -62,6 +62,7 @@ include __DIR__ . '/header.php';
     <div class="detail-item"><div class="lbl">Rujukan</div><div class="val"><?= htmlspecialchars($e['ref_no']) ?></div></div>
     <div class="detail-item"><div class="lbl">Status</div><div class="val"><span class="badge badge-<?= $e['status'] ?>"><?= $statuses[$e['status']] ?? $e['status'] ?></span></div></div>
     <div class="detail-item"><div class="lbl">Nama</div><div class="val"><?= htmlspecialchars($e['name']) ?></div></div>
+    <div class="detail-item"><div class="lbl">Email</div><div class="val"><?= htmlspecialchars($e['email'] ?: 'Tidak disediakan') ?></div></div>
     <div class="detail-item"><div class="lbl">WhatsApp</div><div class="val"><?= htmlspecialchars($e['phone']) ?></div></div>
     <div class="detail-item"><div class="lbl">Premis</div><div class="val"><?= htmlspecialchars($e['premise']) ?></div></div>
     <div class="detail-item"><div class="lbl">Jenis Premis</div><div class="val"><?= htmlspecialchars($e['premise_type']) ?></div></div>
