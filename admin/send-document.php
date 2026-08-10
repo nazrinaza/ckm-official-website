@@ -197,7 +197,8 @@ try {
     if ($sent) {
         echo json_encode(['success' => true, 'message' => $docType . ' berjaya dihantar ke ' . $email]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Gagal menghantar email.']);
+        error_log('CKM send-document SMTP failed. Log: ' . $smtp->getLog());
+        echo json_encode(['success' => false, 'message' => 'Gagal menghantar email. SMTP Log: ' . $smtp->getLog()]);
     }
 } catch (Exception $e) {
     error_log('CKM send-document SMTP error: ' . $e->getMessage());
