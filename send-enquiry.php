@@ -1,7 +1,7 @@
 <?php
 /**
  * CKM — Enquiry Form Handler
- * Saves to database (admin system) + sends email via SendGrid
+ * Saves to database (admin system) + sends email via Zoho Mail SMTP
  * - Email 1: Notification to CKM admin (jom@cucikarpetmasjid.com)
  * - Email 2: Acknowledgement to customer (if email provided)
  * cucikarpetmasjid.com
@@ -20,9 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $configFile = __DIR__ . '/config.php';
 $config = is_file($configFile) ? require $configFile : [];
 
-$apiKey    = $config['SENDGRID_API_KEY'] ?? getenv('SENDGRID_API_KEY') ?: '';
-$fromEmail = $config['SENDGRID_FROM_EMAIL'] ?? getenv('SENDGRID_FROM_EMAIL') ?: '';
-$toEmail   = $config['ENQUIRY_TO_EMAIL'] ?? getenv('ENQUIRY_TO_EMAIL') ?: '';
+// Zoho Mail SMTP config
+$smtpHost = $config['ZOHO_SMTP_HOST'] ?? 'smtp.zoho.com';
+$smtpPort = (int)($config['ZOHO_SMTP_PORT'] ?? 587);
+$smtpUser = $config['ZOHO_SMTP_USER'] ?? '';
+$smtpPass = $config['ZOHO_SMTP_PASS'] ?? '';
+$fromName = $config['ZOHO_FROM_NAME'] ?? 'cucikarpetmasjid.com';
+$toEmail  = $config['ENQUIRY_TO_EMAIL'] ?? $smtpUser;
 
 function field(string $name, int $maxLength): string
 {
@@ -57,7 +61,7 @@ if ($name === '' || $phone === '' || $premise === '' || $premiseType === '' ||
 
 /* ── Save to database ── */
 $dbSaved = false;
-$dbError = null;
+$refNo   = 'CKM-' . date('Ymd') . '-000';
 
 try {
     $dbHost = $config['DB_HOST'] ?? 'localhost';
@@ -70,7 +74,6 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
 
-    // Generate ref no: CKM-YYYYMMDD-XXX
     $dateStr = date('Ymd');
     $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM enquiries WHERE DATE(created_at) = CURDATE()");
     $stmtCount->execute();
@@ -84,57 +87,16 @@ try {
     $stmt->execute([$refNo, $name, $email !== '' ? $email : null, $phone, $premise, $premiseType, $location, $area, $preferredDate, $issue, $message, $consent]);
     $dbSaved = true;
 } catch (Exception $e) {
-    $dbError = $e->getMessage();
-    error_log('CKM DB error: ' . $dbError);
+    error_log('CKM DB error: ' . $e->getMessage());
 }
 
-/* ── Helper: send email via SendGrid ── */
-function send_sendgrid(string $apiKey, string $fromEmail, array $to, string $subject, string $html): bool
-{
-    $personalizations = [];
-    foreach ($to as $recipient) {
-        $personalizations[] = [
-            'to' => [['email' => $recipient['email'], 'name' => $recipient['name'] ?? '']],
-            'subject' => $subject,
-        ];
-    }
-
-    $payload = [
-        'personalizations' => $personalizations,
-        'from' => ['email' => $fromEmail, 'name' => 'cucikarpetmasjid.com'],
-        'reply_to' => ['email' => $fromEmail, 'name' => 'cucikarpetmasjid.com'],
-        'content' => [['type' => 'text/html', 'value' => $html]],
-    ];
-
-    $curl = curl_init('https://api.sendgrid.com/v3/mail/send');
-    curl_setopt_array($curl, [
-        CURLOPT_POST => true,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 20,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer *** . $apiKey,
-            'Content-Type: application/json',
-        ],
-        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
-    ]);
-
-    $response = curl_exec($curl);
-    $statusCode = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($curl);
-    curl_close($curl);
-
-    $ok = ($response !== false && $curlError === '' && $statusCode >= 200 && $statusCode < 300);
-    if (!$ok) {
-        error_log("CKM SendGrid error. HTTP {$statusCode} {$curlError} Subject: {$subject}");
-    }
-    return $ok;
-}
-
-/* ── Send emails via SendGrid (if configured) ── */
+/* ── Send emails via Zoho Mail SMTP ── */
 $adminEmailSent = false;
 $ackEmailSent   = false;
 
-if ($apiKey !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL) && filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+if ($smtpUser !== '' && $smtpPass !== '' && filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+    require_once __DIR__ . '/smtp.php';
+
     $safe = static fn(string $value): string =>
         htmlspecialchars($value !== '' ? $value : 'Tidak dinyatakan', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
@@ -156,7 +118,12 @@ if ($apiKey !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL) && filter_va
   <tr><td><strong>Catatan</strong></td><td>' . nl2br($safe($message)) . '</td></tr>
 </table>';
 
-    $adminEmailSent = send_sendgrid($apiKey, $fromEmail, [['email' => $toEmail]], $adminSubject, $adminHtml);
+    try {
+        $smtp = new CkmSmtp($smtpHost, $smtpPort, $smtpUser, $smtpPass);
+        $adminEmailSent = $smtp->send($toEmail, $adminSubject, $adminHtml, $fromName);
+    } catch (Exception $e) {
+        error_log('CKM SMTP admin email error: ' . $e->getMessage());
+    }
 
     /* ── Email 2: Acknowledgement to customer (if email provided) ── */
     if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -185,7 +152,12 @@ if ($apiKey !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL) && filter_va
   </div>
 </div>';
 
-        $ackEmailSent = send_sendgrid($apiKey, $fromEmail, [['email' => $email, 'name' => $name]], $ackSubject, $ackHtml);
+        try {
+            $smtp2 = new CkmSmtp($smtpHost, $smtpPort, $smtpUser, $smtpPass);
+            $ackEmailSent = $smtp2->send($email, $ackSubject, $ackHtml, $fromName);
+        } catch (Exception $e) {
+            error_log('CKM SMTP acknowledgement email error: ' . $e->getMessage());
+        }
     }
 }
 
