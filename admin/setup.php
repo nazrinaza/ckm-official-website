@@ -24,6 +24,7 @@ $queries = [
         id              INT AUTO_INCREMENT PRIMARY KEY,
         ref_no          VARCHAR(30) NOT NULL UNIQUE,
         name            VARCHAR(100) NOT NULL,
+        email           VARCHAR(150) DEFAULT NULL,
         phone           VARCHAR(30) NOT NULL,
         premise         VARCHAR(140) NOT NULL,
         premise_type    VARCHAR(80) NOT NULL,
