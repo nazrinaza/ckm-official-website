@@ -9,7 +9,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>CKM Admin — <?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></title>
-  <link rel="stylesheet" href="assets/admin.css?v=20260810b">
+  <link rel="stylesheet" href="assets/admin.css?v=20260810c">
 </head>
 <body>
 <div class="layout">
