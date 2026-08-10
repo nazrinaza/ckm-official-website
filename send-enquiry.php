@@ -112,7 +112,7 @@ if ($smtpUser !== '' && $smtpPass !== '' && filter_var($toEmail, FILTER_VALIDATE
   <tr><td><strong>Premis</strong></td><td>' . $safe($premise) . '</td></tr>
   <tr><td><strong>Jenis premis</strong></td><td>' . $safe($premiseType) . '</td></tr>
   <tr><td><strong>Lokasi</strong></td><td>' . $safe($location) . '</td></tr>
-  <tr><td><strong>Anggaran keluasan</strong></td><td>' . $safe($area) . '</td></tr>
+  <tr><td><strong>Anggaran keluasan</strong></td><td>' . $safe($area) . ($area ? ' sq/ft' : '') . '</td></tr>
   <tr><td><strong>Tarikh pilihan</strong></td><td>' . $safe($preferredDate) . '</td></tr>
   <tr><td><strong>Keperluan utama</strong></td><td>' . $safe($issue) . '</td></tr>
   <tr><td><strong>Catatan</strong></td><td>' . nl2br($safe($message)) . '</td></tr>
