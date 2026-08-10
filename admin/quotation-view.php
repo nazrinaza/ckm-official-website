@@ -58,6 +58,7 @@ include __DIR__ . '/header.php';
   </div>
   <div>
     <button onclick="window.print()" class="btn btn-primary btn-sm">Cetak / PDF</button>
+    <button onclick="sendDocument('quotation', <?= $id ?>, '<?= htmlspecialchars($q['client_email'] ?? '', ENT_QUOTES) ?>')" class="btn btn-gold btn-sm">Hantar Email</button>
     <a class="btn btn-outline btn-sm" href="quotations.php">Kembali</a>
   </div>
 </div>
@@ -117,6 +118,7 @@ include __DIR__ . '/header.php';
     <div style="text-align:right">
       <div style="font-size:13px;text-transform:uppercase;color:#999;margin-bottom:5px">Kepada</div>
       <strong><?= htmlspecialchars($q['client_name']) ?></strong><br>
+      <?php if (!empty($q['client_email'])): ?><?= htmlspecialchars($q['client_email']) ?><br><?php endif; ?>
       <?= htmlspecialchars($q['client_phone']) ?><br>
       <?= nl2br(htmlspecialchars($q['client_address'])) ?>
     </div>
