@@ -5,10 +5,13 @@
  * Jangan kongsi API keys atau masukkan ke JavaScript.
  */
 return [
-    // SendGrid (email)
-    'SENDGRID_API_KEY'    => 'SG.xxx...xxxx',
-    'SENDGRID_FROM_EMAIL' => 'verified-sender@domainanda.com',
-    'ENQUIRY_TO_EMAIL'    => 'sales@domainanda.com',
+    // Zoho Mail SMTP (untuk sending email — acknowledgement + notification)
+    'ZOHO_SMTP_HOST' => 'smtp.zoho.com',
+    'ZOHO_SMTP_PORT' => 587,        // 587 = STARTTLS, 465 = SSL
+    'ZOHO_SMTP_USER' => 'jom@cucikarpetmasjid.com',
+    'ZOHO_SMTP_PASS' => 'password-zoho-anda',
+    'ZOHO_FROM_NAME' => 'cucikarpetmasjid.com',
+    'ENQUIRY_TO_EMAIL' => 'jom@cucikarpetmasjid.com',
 
     // Database (MySQL — for admin system)
     'DB_HOST' => 'localhost',
