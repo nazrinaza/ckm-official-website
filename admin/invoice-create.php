@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $pdo->prepare("
             INSERT INTO invoices (invoice_no, quotation_id, client_name, client_email, client_phone, client_address, premise, service_desc, items, subtotal, tax_rate, tax_amount, discount, total, amount_paid, balance, status, issue_date, due_date, notes, created_by)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 0, ?, 'unpaid', ?, ?, ?, ?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, ?, 0, ?, 'unpaid', ?, ?, ?, ?)
         ");
         $stmt->execute([
             $invoiceNo, $postQuoteId ?: null, $clientName, $clientEmail !== '' ? $clientEmail : null, $clientPhone, $clientAddress, $premise, $serviceDesc,
