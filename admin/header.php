@@ -3,6 +3,16 @@
 $admin = current_admin();
 $currentPage = basename($_SERVER['PHP_SELF']);
 ?>
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CKM Admin — <?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></title>
+  <link rel="stylesheet" href="assets/admin.css">
+</head>
+<body>
+<div class="layout">
 <aside class="sidebar">
   <div class="logo">
     <img src="../assets/logo-text.png" alt="cucikarpetmasjid.com" />
