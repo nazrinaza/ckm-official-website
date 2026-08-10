@@ -188,51 +188,28 @@ $html .= '
   </div>
 </div>';
 
-// Send via Zoho SMTP
-require_once __DIR__ . '/../smtp.php';
+// Send via PHP mail() — cPanel Exim MTA
+// Note: Hosting intercepts outbound SMTP (port 25/587 -> local Exim),
+// so direct Zoho SMTP is impossible. PHP mail() via Exim is the only option.
+// Requires SPF record to include server IP 103.191.76.66.
 
-try {
-    $smtp = new CkmSmtp($smtpHost, $smtpPort, $smtpUser, $smtpPass);
-    $sent = $smtp->send($email, $subject, $html, $fromName);
-    if ($sent) {
-        echo json_encode(['success' => true, 'message' => $docType . ' berjaya dihantar ke ' . $email]);
-    } else {
-        // SMTP failed — try PHP mail() as fallback
-        error_log('CKM send-document SMTP failed. Log: ' . $smtp->getLog());
-        
-        $headers = [
-            'MIME-Version: 1.0',
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . $fromName . ' <' . $smtpUser . '>',
-            'Reply-To: ' . $fromName . ' <' . $smtpUser . '>',
-            'X-Mailer: CKM-Admin/1.0',
-        ];
-        $plainSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
-        $mailSent = @mail($email, $plainSubject, $html, implode("\r\n", $headers));
-        
-        if ($mailSent) {
-            echo json_encode(['success' => true, 'message' => $docType . ' berjaya dihantar ke ' . $email . ' (via PHP mail)']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Gagal menghantar email. SMTP gagal dan PHP mail() juga gagal. Sila hubungi pentadbir.']);
-        }
-    }
-} catch (Exception $e) {
-    error_log('CKM send-document SMTP error: ' . $e->getMessage());
-    
-    // Try PHP mail() as fallback
-    $headers = [
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        'From: ' . $fromName . ' <' . $smtpUser . '>',
-        'Reply-To: ' . $fromName . ' <' . $smtpUser . '>',
-        'X-Mailer: CKM-Admin/1.0',
-    ];
-    $plainSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
-    $mailSent = @mail($email, $plainSubject, $html, implode("\r\n", $headers));
-    
-    if ($mailSent) {
-        echo json_encode(['success' => true, 'message' => $docType . ' berjaya dihantar ke ' . $email . ' (via PHP mail fallback)']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Ralat SMTP: ' . $e->getMessage()]);
-    }
+$encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+$headers = [
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=UTF-8',
+    'From: ' . $fromName . ' <' . $smtpUser . '>',
+    'Reply-To: ' . $fromName . ' <' . $smtpUser . '>',
+    'X-Mailer: CKM-Admin/1.0',
+    'Date: ' . date(DATE_RFC2822),
+    'Message-ID: <' . md5(uniqid('', true)) . '@cucikarpetmasjid.com>',
+];
+
+$sent = @mail($email, $encodedSubject, $html, implode("\r\n", $headers), '-f ' . $smtpUser);
+
+if ($sent) {
+    echo json_encode(['success' => true, 'message' => $docType . ' berjaya dihantar ke ' . $email]);
+} else {
+    $lastError = error_get_last();
+    error_log('CKM send-document mail() failed: ' . ($lastError['message'] ?? 'unknown'));
+    echo json_encode(['success' => false, 'message' => 'Gagal menghantar email. ' . ($lastError['message'] ?? 'Sila hubungi pentadbir.')]);
 }
