@@ -87,6 +87,7 @@ include __DIR__ . '/header.php';
   </div>
   <div>
     <button onclick="window.print()" class="btn btn-primary btn-sm">Cetak / PDF</button>
+    <button onclick="sendDocument('invoice', <?= $id ?>, '<?= htmlspecialchars($inv['client_email'] ?? '', ENT_QUOTES) ?>')" class="btn btn-gold btn-sm">Hantar Email</button>
     <a class="btn btn-outline btn-sm" href="invoices.php">Kembali</a>
   </div>
 </div>
@@ -161,6 +162,7 @@ include __DIR__ . '/header.php';
     <div style="text-align:right">
       <div style="font-size:13px;text-transform:uppercase;color:#999;margin-bottom:5px">Ditagihkan Kepada</div>
       <strong><?= htmlspecialchars($inv['client_name']) ?></strong><br>
+      <?php if (!empty($inv['client_email'])): ?><?= htmlspecialchars($inv['client_email']) ?><br><?php endif; ?>
       <?= htmlspecialchars($inv['client_phone']) ?><br>
       <?= nl2br(htmlspecialchars($inv['client_address'])) ?>
     </div>
