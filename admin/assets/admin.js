@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Close sidebar on nav click (mobile)
   document.querySelectorAll('.sidebar .nav-item').forEach(function(item) {
     item.addEventListener('click', function() {
-      if (window.innerWidth <= 768px) {
+      if (window.innerWidth <= 768) {
         closeSidebar();
       }
     });
