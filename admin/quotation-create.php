@@ -45,6 +45,7 @@ $alert = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $clientName   = trim((string)($_POST['client_name'] ?? ''));
+    $clientEmail  = trim((string)($_POST['client_email'] ?? ''));
     $clientPhone  = trim((string)($_POST['client_phone'] ?? ''));
     $clientAddress= trim((string)($_POST['client_address'] ?? ''));
     $premise      = trim((string)($_POST['premise'] ?? ''));
@@ -86,11 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $quoteNo = "{$prefix}-{$dateStr}-{$seq}";
 
         $stmt = $pdo->prepare("
-            INSERT INTO quotations (quote_no, enquiry_id, client_name, client_phone, client_address, premise, service_desc, items, subtotal, tax_rate, tax_amount, discount, total, valid_until, status, notes, created_by)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'draft', ?, ?)
+            INSERT INTO quotations (quote_no, enquiry_id, client_name, client_email, client_phone, client_address, premise, service_desc, items, subtotal, tax_rate, tax_amount, discount, total, valid_until, status, notes, created_by)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'draft', ?, ?)
         ");
         $stmt->execute([
-            $quoteNo, $postEnqId ?: null, $clientName, $clientPhone, $clientAddress, $premise, $serviceDesc,
+            $quoteNo, $postEnqId ?: null, $clientName, $clientEmail !== '' ? $clientEmail : null, $clientPhone, $clientAddress, $premise, $serviceDesc,
             json_encode($items, JSON_UNESCAPED_UNICODE), $subtotal, $taxRateInput, $taxAmount, $discount, $total,
             $validUntil ?: null, $notes, $admin['id']
         ]);
@@ -119,6 +120,12 @@ include __DIR__ . '/header.php';
         <label>Nama Klien *</label>
         <input type="text" name="client_name" required value="<?= htmlspecialchars($prefill['client_name']) ?>">
       </div>
+      <div class="form-group">
+        <label>Email Klien</label>
+        <input type="email" name="client_email" value="<?= htmlspecialchars($prefill['client_email']) ?>">
+      </div>
+    </div>
+    <div class="form-row">
       <div class="form-group">
         <label>WhatsApp</label>
         <input type="text" name="client_phone" value="<?= htmlspecialchars($prefill['client_phone']) ?>">
