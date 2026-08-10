@@ -84,15 +84,15 @@ if ($type === 'quotation') {
         $pdo->prepare("UPDATE quotations SET status='sent' WHERE id = ?")->execute([$id]);
     }
 
-    $totalsHtml = '<div style="margin-top:15px;border-top:2px solid #061d2a;padding-top:10px">'
-        . '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Subtotal</span><span>RM ' . number_format((float)$doc['subtotal'], 2) . '</span></div>';
+    $totalsHtml = '<table style="width:300px;float:right;border-collapse:collapse;margin-top:15px;font-size:14px">'
+        . '<tr><td style="padding:4px 0;border-top:2px solid #061d2a;text-align:left">Subtotal</td><td style="padding:4px 0;border-top:2px solid #061d2a;text-align:right">RM ' . number_format((float)$doc['subtotal'], 2) . '</td></tr>';
     if ((float)$doc['discount'] > 0) {
-        $totalsHtml .= '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Diskaun</span><span>- RM ' . number_format((float)$doc['discount'], 2) . '</span></div>';
+        $totalsHtml .= '<tr><td style="padding:4px 0;text-align:left">Diskaun</td><td style="padding:4px 0;text-align:right">- RM ' . number_format((float)$doc['discount'], 2) . '</td></tr>';
     }
     if ((float)$doc['tax_amount'] > 0) {
-        $totalsHtml .= '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Cukai (' . (float)$doc['tax_rate'] . '%)</span><span>RM ' . number_format((float)$doc['tax_amount'], 2) . '</span></div>';
+        $totalsHtml .= '<tr><td style="padding:4px 0;text-align:left">Cukai (' . (float)$doc['tax_rate'] . '%)</td><td style="padding:4px 0;text-align:right">RM ' . number_format((float)$doc['tax_amount'], 2) . '</td></tr>';
     }
-    $totalsHtml .= '<div style="display:flex;justify-content:space-between;font-size:18px;font-weight:700;border-top:1px solid #ccc;margin-top:5px;padding-top:8px"><span>Jumlah</span><span>RM ' . number_format((float)$doc['total'], 2) . '</span></div></div>';
+    $totalsHtml .= '<tr style="font-size:18px;font-weight:700"><td style="padding:8px 0 4px;border-top:1px solid #ccc;text-align:left">Jumlah</td><td style="padding:8px 0 4px;border-top:1px solid #ccc;text-align:right">RM ' . number_format((float)$doc['total'], 2) . '</td></tr></table>';
 
 } else {
     $stmt = $pdo->prepare("SELECT * FROM invoices WHERE id = ?");
@@ -108,21 +108,21 @@ if ($type === 'quotation') {
     $docType = 'Invoice';
     $docTypeLower = 'invois';
 
-    $totalsHtml = '<div style="margin-top:15px;border-top:2px solid #061d2a;padding-top:10px">'
-        . '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Subtotal</span><span>RM ' . number_format((float)$doc['subtotal'], 2) . '</span></div>';
+    $totalsHtml = '<table style="width:300px;float:right;border-collapse:collapse;margin-top:15px;font-size:14px">'
+        . '<tr><td style="padding:4px 0;border-top:2px solid #061d2a;text-align:left">Subtotal</td><td style="padding:4px 0;border-top:2px solid #061d2a;text-align:right">RM ' . number_format((float)$doc['subtotal'], 2) . '</td></tr>';
     if ((float)$doc['discount'] > 0) {
-        $totalsHtml .= '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Diskaun</span><span>- RM ' . number_format((float)$doc['discount'], 2) . '</span></div>';
+        $totalsHtml .= '<tr><td style="padding:4px 0;text-align:left">Diskaun</td><td style="padding:4px 0;text-align:right">- RM ' . number_format((float)$doc['discount'], 2) . '</td></tr>';
     }
     if ((float)$doc['tax_amount'] > 0) {
-        $totalsHtml .= '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Cukai (' . (float)$doc['tax_rate'] . '%)</span><span>RM ' . number_format((float)$doc['tax_amount'], 2) . '</span></div>';
+        $totalsHtml .= '<tr><td style="padding:4px 0;text-align:left">Cukai (' . (float)$doc['tax_rate'] . '%)</td><td style="padding:4px 0;text-align:right">RM ' . number_format((float)$doc['tax_amount'], 2) . '</td></tr>';
     }
-    $totalsHtml .= '<div style="display:flex;justify-content:space-between;font-size:18px;font-weight:700;border-top:1px solid #ccc;margin-top:5px;padding-top:8px"><span>Jumlah</span><span>RM ' . number_format((float)$doc['total'], 2) . '</span></div>';
+    $totalsHtml .= '<tr style="font-size:18px;font-weight:700"><td style="padding:8px 0 4px;border-top:1px solid #ccc;text-align:left">Jumlah</td><td style="padding:8px 0 4px;border-top:1px solid #ccc;text-align:right">RM ' . number_format((float)$doc['total'], 2) . '</td></tr>';
     if ((float)$doc['amount_paid'] > 0) {
-        $totalsHtml .= '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Dibayar</span><span>- RM ' . number_format((float)$doc['amount_paid'], 2) . '</span></div>';
+        $totalsHtml .= '<tr><td style="padding:4px 0;text-align:left">Dibayar</td><td style="padding:4px 0;text-align:right">- RM ' . number_format((float)$doc['amount_paid'], 2) . '</td></tr>';
         $bakiColor = (float)$doc['balance'] > 0 ? '#e74c3c' : '#27ae60';
-        $totalsHtml .= '<div style="display:flex;justify-content:space-between;font-weight:700;color:' . $bakiColor . ';border-top:1px solid #ccc;padding-top:5px"><span>Baki</span><span>RM ' . number_format((float)$doc['balance'], 2) . '</span></div>';
+        $totalsHtml .= '<tr style="font-weight:700;color:' . $bakiColor . '"><td style="padding:5px 0;border-top:1px solid #ccc;text-align:left">Baki</td><td style="padding:5px 0;border-top:1px solid #ccc;text-align:right">RM ' . number_format((float)$doc['balance'], 2) . '</td></tr>';
     }
-    $totalsHtml .= '</div>';
+    $totalsHtml .= '</table>';
 }
 
 // Build items table
