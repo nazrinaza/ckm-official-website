@@ -197,10 +197,42 @@ try {
     if ($sent) {
         echo json_encode(['success' => true, 'message' => $docType . ' berjaya dihantar ke ' . $email]);
     } else {
+        // SMTP failed — try PHP mail() as fallback
         error_log('CKM send-document SMTP failed. Log: ' . $smtp->getLog());
-        echo json_encode(['success' => false, 'message' => 'Gagal menghantar email. SMTP Log: ' . $smtp->getLog()]);
+        
+        $headers = [
+            'MIME-Version: 1.0',
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . $fromName . ' <' . $smtpUser . '>',
+            'Reply-To: ' . $fromName . ' <' . $smtpUser . '>',
+            'X-Mailer: CKM-Admin/1.0',
+        ];
+        $plainSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+        $mailSent = @mail($email, $plainSubject, $html, implode("\r\n", $headers));
+        
+        if ($mailSent) {
+            echo json_encode(['success' => true, 'message' => $docType . ' berjaya dihantar ke ' . $email . ' (via PHP mail)']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Gagal menghantar email. SMTP gagal dan PHP mail() juga gagal. Sila hubungi pentadbir.']);
+        }
     }
 } catch (Exception $e) {
     error_log('CKM send-document SMTP error: ' . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => 'Ralat SMTP: ' . $e->getMessage()]);
+    
+    // Try PHP mail() as fallback
+    $headers = [
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        'From: ' . $fromName . ' <' . $smtpUser . '>',
+        'Reply-To: ' . $fromName . ' <' . $smtpUser . '>',
+        'X-Mailer: CKM-Admin/1.0',
+    ];
+    $plainSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+    $mailSent = @mail($email, $plainSubject, $html, implode("\r\n", $headers));
+    
+    if ($mailSent) {
+        echo json_encode(['success' => true, 'message' => $docType . ' berjaya dihantar ke ' . $email . ' (via PHP mail fallback)']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Ralat SMTP: ' . $e->getMessage()]);
+    }
 }
