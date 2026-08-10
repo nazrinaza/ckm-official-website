@@ -34,7 +34,57 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
+
+  // Close sidebar on nav click (mobile)
+  document.querySelectorAll('.sidebar .nav-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      if (window.innerWidth <= 768px) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Close sidebar on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeSidebar();
+    }
+  });
+
+  // Close sidebar on resize to desktop
+  window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+      closeSidebar();
+    }
+  });
 });
+
+// ── Sidebar toggle ──
+function toggleSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  if (sidebar.classList.contains('show')) {
+    closeSidebar();
+  } else {
+    openSidebar();
+  }
+}
+
+function openSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  sidebar.classList.add('show');
+  overlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  sidebar.classList.remove('show');
+  overlay.classList.remove('show');
+  document.body.style.overflow = '';
+}
 
 // Calculate totals for quote/invoice
 function calcTotals() {
