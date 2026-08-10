@@ -38,7 +38,7 @@ try {
     $existingQuote = $stmtQ->fetch();
 } catch (Exception $ex) {}
 
-$statuses = ['new'=>'Baru','contacted'=>'Dihubungi','quoted'=>'Dipetik','won'=>'Menang','lost'=>'Hilang','archived'=>'Arkib'];
+$statuses = ['new'=>'Baru','contacted'=>'Dihubungi','quoted'=>'Quoted','won'=>'Menang','lost'=>'Hilang','archived'=>'Arkib'];
 
 $pageTitle = 'Enquiry #' . htmlspecialchars($e['ref_no']);
 include __DIR__ . '/header.php';
@@ -67,7 +67,7 @@ include __DIR__ . '/header.php';
     <div class="detail-item"><div class="lbl">Premis</div><div class="val"><?= htmlspecialchars($e['premise']) ?></div></div>
     <div class="detail-item"><div class="lbl">Jenis Premis</div><div class="val"><?= htmlspecialchars($e['premise_type']) ?></div></div>
     <div class="detail-item"><div class="lbl">Lokasi</div><div class="val"><?= htmlspecialchars($e['location']) ?></div></div>
-    <div class="detail-item"><div class="lbl">Keluasan</div><div class="val"><?= htmlspecialchars($e['area'] ?: 'Tidak dinyatakan') ?></div></div>
+    <div class="detail-item"><div class="lbl">Keluasan</div><div class="val"><?= htmlspecialchars(($e['area'] ?? '') ?: 'Tidak dinyatakan') . ($e['area'] ? ' sq/ft' : '') ?></div></div>
     <div class="detail-item"><div class="lbl">Tarikh Pilihan</div><div class="val"><?= htmlspecialchars($e['preferred_date'] ?: 'Tidak dinyatakan') ?></div></div>
     <div class="detail-item"><div class="lbl">Dicipta</div><div class="val"><?= date('d/m/Y H:i', strtotime($e['created_at'])) ?></div></div>
     <div class="detail-item" style="grid-column:1/-1"><div class="lbl">Keperluan Utama</div><div class="val"><?= htmlspecialchars($e['issue']) ?></div></div>
