@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $pdo->prepare("
             INSERT INTO quotations (quote_no, enquiry_id, client_name, client_email, client_phone, client_address, premise, service_desc, items, subtotal, tax_rate, tax_amount, discount, total, valid_until, status, notes, created_by)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'draft', ?, ?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'draft', ?, ?)
         ");
         $stmt->execute([
             $quoteNo, $postEnqId ?: null, $clientName, $clientEmail !== '' ? $clientEmail : null, $clientPhone, $clientAddress, $premise, $serviceDesc,
