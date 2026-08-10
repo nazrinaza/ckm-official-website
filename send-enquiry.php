@@ -2,6 +2,8 @@
 /**
  * CKM — Enquiry Form Handler
  * Saves to database (admin system) + sends email via SendGrid
+ * - Email 1: Notification to CKM admin (jom@cucikarpetmasjid.com)
+ * - Email 2: Acknowledgement to customer (if email provided)
  * cucikarpetmasjid.com
  */
 declare(strict_types=1);
@@ -35,6 +37,7 @@ if (field('website', 200) !== '') {
 }
 
 $name          = field('name', 100);
+$email         = field('email', 150);
 $phone         = field('phone', 30);
 $premise       = field('premise', 140);
 $premiseType   = field('premiseType', 80);
@@ -75,44 +78,29 @@ try {
     $refNo = "CKM-{$dateStr}-{$seq}";
 
     $stmt = $pdo->prepare("
-        INSERT INTO enquiries (ref_no, name, phone, premise, premise_type, location, area, preferred_date, issue, message, consent, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
+        INSERT INTO enquiries (ref_no, name, email, phone, premise, premise_type, location, area, preferred_date, issue, message, consent, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
     ");
-    $stmt->execute([$refNo, $name, $phone, $premise, $premiseType, $location, $area, $preferredDate, $issue, $message, $consent]);
+    $stmt->execute([$refNo, $name, $email !== '' ? $email : null, $phone, $premise, $premiseType, $location, $area, $preferredDate, $issue, $message, $consent]);
     $dbSaved = true;
 } catch (Exception $e) {
     $dbError = $e->getMessage();
     error_log('CKM DB error: ' . $dbError);
 }
 
-/* ── Send email via SendGrid (if configured) ── */
-$emailSent = false;
-
-if ($apiKey !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL) && filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
-    $safe = static fn(string $value): string =>
-        htmlspecialchars($value !== '' ? $value : 'Tidak dinyatakan', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-
-    $subject = 'Enquiry Lawatan Tapak cucikarpetmasjid.com — ' . $premise;
-    $html = '
-<h2>Permohonan Lawatan Tapak cucikarpetmasjid.com</h2>
-<p><strong>Rujukan:</strong> ' . $safe($refNo) . '</p>
-<table cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-family:Arial,sans-serif">
-  <tr><td><strong>Nama</strong></td><td>' . $safe($name) . '</td></tr>
-  <tr><td><strong>WhatsApp</strong></td><td>' . $safe($phone) . '</td></tr>
-  <tr><td><strong>Premis</strong></td><td>' . $safe($premise) . '</td></tr>
-  <tr><td><strong>Jenis premis</strong></td><td>' . $safe($premiseType) . '</td></tr>
-  <tr><td><strong>Lokasi</strong></td><td>' . $safe($location) . '</td></tr>
-  <tr><td><strong>Anggaran keluasan</strong></td><td>' . $safe($area) . '</td></tr>
-  <tr><td><strong>Tarikh pilihan</strong></td><td>' . $safe($preferredDate) . '</td></tr>
-  <tr><td><strong>Keperluan utama</strong></td><td>' . $safe($issue) . '</td></tr>
-  <tr><td><strong>Catatan</strong></td><td>' . nl2br($safe($message)) . '</td></tr>
-</table>';
+/* ── Helper: send email via SendGrid ── */
+function send_sendgrid(string $apiKey, string $fromEmail, array $to, string $subject, string $html): bool
+{
+    $personalizations = [];
+    foreach ($to as $recipient) {
+        $personalizations[] = [
+            'to' => [['email' => $recipient['email'], 'name' => $recipient['name'] ?? '']],
+            'subject' => $subject,
+        ];
+    }
 
     $payload = [
-        'personalizations' => [[
-            'to' => [['email' => $toEmail]],
-            'subject' => $subject,
-        ]],
+        'personalizations' => $personalizations,
         'from' => ['email' => $fromEmail, 'name' => 'cucikarpetmasjid.com'],
         'reply_to' => ['email' => $fromEmail, 'name' => 'cucikarpetmasjid.com'],
         'content' => [['type' => 'text/html', 'value' => $html]],
@@ -124,7 +112,7 @@ if ($apiKey !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL) && filter_va
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 20,
         CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $apiKey,
+            'Authorization: Bearer *** . $apiKey,
             'Content-Type: application/json',
         ],
         CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
@@ -135,10 +123,69 @@ if ($apiKey !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL) && filter_va
     $curlError = curl_error($curl);
     curl_close($curl);
 
-    $emailSent = ($response !== false && $curlError === '' && $statusCode >= 200 && $statusCode < 300);
+    $ok = ($response !== false && $curlError === '' && $statusCode >= 200 && $statusCode < 300);
+    if (!$ok) {
+        error_log("CKM SendGrid error. HTTP {$statusCode} {$curlError} Subject: {$subject}");
+    }
+    return $ok;
+}
 
-    if (!$emailSent) {
-        error_log('CKM SendGrid error. HTTP ' . $statusCode . ' ' . $curlError);
+/* ── Send emails via SendGrid (if configured) ── */
+$adminEmailSent = false;
+$ackEmailSent   = false;
+
+if ($apiKey !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL) && filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+    $safe = static fn(string $value): string =>
+        htmlspecialchars($value !== '' ? $value : 'Tidak dinyatakan', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    /* ── Email 1: Notification to CKM admin ── */
+    $adminSubject = 'Enquiry Lawatan Tapak cucikarpetmasjid.com — ' . $premise;
+    $adminHtml = '
+<h2>Permohonan Lawatan Tapak cucikarpetmasjid.com</h2>
+<p><strong>Rujukan:</strong> ' . $safe($refNo) . '</p>
+<table cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-family:Arial,sans-serif">
+  <tr><td><strong>Nama</strong></td><td>' . $safe($name) . '</td></tr>
+  <tr><td><strong>Email</strong></td><td>' . $safe($email) . '</td></tr>
+  <tr><td><strong>WhatsApp</strong></td><td>' . $safe($phone) . '</td></tr>
+  <tr><td><strong>Premis</strong></td><td>' . $safe($premise) . '</td></tr>
+  <tr><td><strong>Jenis premis</strong></td><td>' . $safe($premiseType) . '</td></tr>
+  <tr><td><strong>Lokasi</strong></td><td>' . $safe($location) . '</td></tr>
+  <tr><td><strong>Anggaran keluasan</strong></td><td>' . $safe($area) . '</td></tr>
+  <tr><td><strong>Tarikh pilihan</strong></td><td>' . $safe($preferredDate) . '</td></tr>
+  <tr><td><strong>Keperluan utama</strong></td><td>' . $safe($issue) . '</td></tr>
+  <tr><td><strong>Catatan</strong></td><td>' . nl2br($safe($message)) . '</td></tr>
+</table>';
+
+    $adminEmailSent = send_sendgrid($apiKey, $fromEmail, [['email' => $toEmail]], $adminSubject, $adminHtml);
+
+    /* ── Email 2: Acknowledgement to customer (if email provided) ── */
+    if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $ackSubject = 'Pengesahan Permohonan — ' . $refNo . ' — cucikarpetmasjid.com';
+        $ackHtml = '
+<div style="max-width:560px;margin:0 auto;font-family:Arial,sans-serif;color:#333">
+  <div style="background:#061d2a;padding:20px;text-align:center;border-radius:6px 6px 0 0">
+    <h1 style="color:#d1a54a;margin:0;font-size:20px">cucikarpetmasjid.com</h1>
+    <p style="color:#f5f2ea;margin:5px 0 0;font-size:13px">Cucian karpet profesional untuk surau &amp; masjid</p>
+  </div>
+  <div style="padding:25px;border:1px solid #e0e0e0;border-radius:0 0 6px 6px">
+    <p>Assalamualaikum dan salam sejahtera <strong>' . $safe($name) . '</strong>,</p>
+    <p>Terima kasih kerana menghantar permohonan lawatan tapak kepada <strong>cucikarpetmasjid.com</strong>. Kami telah menerima permohonan anda dan akan menyemak butiran berikut:</p>
+    <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:14px;margin:15px 0">
+      <tr><td style="background:#f5f2ea"><strong>No. Rujukan</strong></td><td style="background:#f5f2ea">' . $safe($refNo) . '</td></tr>
+      <tr><td><strong>Premis</strong></td><td>' . $safe($premise) . '</td></tr>
+      <tr><td><strong>Lokasi</strong></td><td>' . $safe($location) . '</td></tr>
+      <tr><td><strong>Keperluan</strong></td><td>' . $safe($issue) . '</td></tr>
+    </table>
+    <p>Pasukan kami akan menghubungi anda melalui WhatsApp di nombor <strong>' . $safe($phone) . '</strong> dalam masa 1-2 hari kerja untuk pengesahan dan penjadualan lawatan.</p>
+    <p style="background:#f5f2ea;padding:12px;border-radius:4px;font-size:13px"><strong>Nota:</strong> Simpan nombor rujukan <strong>' . $safe($refNo) . '</strong> untuk sebarang pertanyaan lanjut.</p>
+    <p>Sekiranya ada maklumat tambahan yang ingin dikongsikan, sila balas email ini atau hubungi kami terus.</p>
+    <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0">
+    <p style="font-size:12px;color:#999">Email ini dihantar secara automatik. Sila jangan balas jika tiada pertanyaan tambahan.</p>
+    <p style="font-size:13px;color:#061d2a"><strong>cucikarpetmasjid.com</strong><br>jom@cucikarpetmasjid.com</p>
+  </div>
+</div>';
+
+        $ackEmailSent = send_sendgrid($apiKey, $fromEmail, [['email' => $email, 'name' => $name]], $ackSubject, $ackHtml);
     }
 }
 
@@ -148,7 +195,7 @@ if ($dbSaved) {
         'message' => 'Terima kasih. Permohonan anda telah diterima dan akan disemak.',
         'ref_no'  => $refNo,
     ]);
-} elseif ($emailSent) {
+} elseif ($adminEmailSent || $ackEmailSent) {
     echo json_encode([
         'message' => 'Terima kasih. Permohonan anda telah diterima.',
     ]);
