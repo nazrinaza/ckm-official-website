@@ -13,7 +13,7 @@ $quoteId = (int)($_GET['quote_id'] ?? 0);
 
 // Prefill from quotation
 $prefill = [
-    'client_name'=>'','client_phone'=>'','client_address'=>'','premise'=>'',
+    'client_name'=>'','client_email'=>'','client_phone'=>'','client_address'=>'','premise'=>'',
     'service_desc'=>'','items'=>[],'subtotal'=>0,'tax_rate'=>0,'tax_amount'=>0,
     'discount'=>0,'total'=>0,'quotation_id'=>null
 ];
@@ -25,6 +25,7 @@ if ($quoteId) {
     if ($q) {
         $prefill = [
             'client_name'    => $q['client_name'],
+            'client_email'   => $q['client_email'] ?? '',
             'client_phone'   => $q['client_phone'] ?? '',
             'client_address' => $q['client_address'] ?? '',
             'premise'        => $q['premise'] ?? '',
@@ -50,6 +51,7 @@ $alert = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $clientName   = trim((string)($_POST['client_name'] ?? ''));
+    $clientEmail  = trim((string)($_POST['client_email'] ?? ''));
     $clientPhone  = trim((string)($_POST['client_phone'] ?? ''));
     $clientAddress= trim((string)($_POST['client_address'] ?? ''));
     $premise      = trim((string)($_POST['premise'] ?? ''));
@@ -90,11 +92,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $invoiceNo = "{$prefix}-{$dateStr}-{$seq}";
 
         $stmt = $pdo->prepare("
-            INSERT INTO invoices (invoice_no, quotation_id, client_name, client_phone, client_address, premise, service_desc, items, subtotal, tax_rate, tax_amount, discount, total, amount_paid, balance, status, issue_date, due_date, notes, created_by)
+            INSERT INTO invoices (invoice_no, quotation_id, client_name, client_email, client_phone, client_address, premise, service_desc, items, subtotal, tax_rate, tax_amount, discount, total, amount_paid, balance, status, issue_date, due_date, notes, created_by)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 0, ?, 'unpaid', ?, ?, ?, ?)
         ");
         $stmt->execute([
-            $invoiceNo, $postQuoteId ?: null, $clientName, $clientPhone, $clientAddress, $premise, $serviceDesc,
+            $invoiceNo, $postQuoteId ?: null, $clientName, $clientEmail !== '' ? $clientEmail : null, $clientPhone, $clientAddress, $premise, $serviceDesc,
             json_encode($items, JSON_UNESCAPED_UNICODE), $subtotal, $taxRateInput, $taxAmount, $discount, $total,
             $total, // balance = total
             $issueDate ?: date('Y-m-d'), $dueDate ?: null, $notes, $admin['id']
@@ -119,6 +121,12 @@ include __DIR__ . '/header.php';
         <label>Nama Klien *</label>
         <input type="text" name="client_name" required value="<?= htmlspecialchars($prefill['client_name']) ?>">
       </div>
+      <div class="form-group">
+        <label>Email Klien</label>
+        <input type="email" name="client_email" value="<?= htmlspecialchars($prefill['client_email']) ?>">
+      </div>
+    </div>
+    <div class="form-row">
       <div class="form-group">
         <label>WhatsApp</label>
         <input type="text" name="client_phone" value="<?= htmlspecialchars($prefill['client_phone']) ?>">
