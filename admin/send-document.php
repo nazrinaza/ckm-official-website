@@ -188,28 +188,38 @@ $html .= '
   </div>
 </div>';
 
-// Send via PHP mail() — cPanel Exim MTA
-// Note: Hosting intercepts outbound SMTP (port 25/587 -> local Exim),
-// so direct Zoho SMTP is impossible. PHP mail() via Exim is the only option.
-// Requires SPF record to include server IP 103.191.76.66.
+// Send via Resend API (HTTP port 443 — bypasses hosting SMTP block)
+$resendKey = $config['RESEND_API_KEY'] ?? '';
+$resendFromEmail = $config['RESEND_FROM_EMAIL'] ?? $smtpUser;
+$resendFromName  = $config['RESEND_FROM_NAME'] ?? $fromName;
 
-$encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
-$headers = [
-    'MIME-Version: 1.0',
-    'Content-Type: text/html; charset=UTF-8',
-    'From: ' . $fromName . ' <' . $smtpUser . '>',
-    'Reply-To: ' . $fromName . ' <' . $smtpUser . '>',
-    'X-Mailer: CKM-Admin/1.0',
-    'Date: ' . date(DATE_RFC2822),
-    'Message-ID: <' . md5(uniqid('', true)) . '@cucikarpetmasjid.com>',
-];
+if ($resendKey !== '') {
+    require_once __DIR__ . '/../resend.php';
+    $resend = new CkmResend($resendKey, $resendFromEmail, $resendFromName);
+    $sent = $resend->send($email, $subject, $html);
 
-$sent = @mail($email, $encodedSubject, $html, implode("\r\n", $headers), '-f ' . $smtpUser);
-
-if ($sent) {
-    echo json_encode(['success' => true, 'message' => $docType . ' berjaya dihantar ke ' . $email]);
+    if ($sent) {
+        echo json_encode(['success' => true, 'message' => $docType . ' berjaya dihantar ke ' . $email]);
+    } else {
+        error_log('CKM send-document Resend error: ' . $resend->getError());
+        // Fallback to PHP mail()
+        $fallbackSent = @mail($email, '=?UTF-8?B?' . base64_encode($subject) . '?=', $html,
+            "MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nFrom: {$fromName} <{$smtpUser}>\r\n",
+            '-f ' . $smtpUser);
+        if ($fallbackSent) {
+            echo json_encode(['success' => true, 'message' => $docType . ' dihantar ke ' . $email . ' (fallback)']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Gagal menghantar email. Sila hubungi pentadbir.']);
+        }
+    }
 } else {
-    $lastError = error_get_last();
-    error_log('CKM send-document mail() failed: ' . ($lastError['message'] ?? 'unknown'));
-    echo json_encode(['success' => false, 'message' => 'Gagal menghantar email. ' . ($lastError['message'] ?? 'Sila hubungi pentadbir.')]);
+    // No Resend key — use PHP mail() fallback
+    $sent = @mail($email, '=?UTF-8?B?' . base64_encode($subject) . '?=', $html,
+        "MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nFrom: {$fromName} <{$smtpUser}>\r\n",
+        '-f ' . $smtpUser);
+    if ($sent) {
+        echo json_encode(['success' => true, 'message' => $docType . ' dihantar ke ' . $email]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Gagal menghantar email. Resend API key belum dikonfigurasi.']);
+    }
 }
