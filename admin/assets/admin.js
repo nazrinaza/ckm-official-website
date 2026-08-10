@@ -73,3 +73,49 @@ function removeRow(btn) {
   btn.closest('tr').remove();
   calcTotals();
 }
+
+// Send quotation/invoice via email
+function sendDocument(type, id, defaultEmail) {
+  var email = prompt('Masukkan email pelanggan:', defaultEmail || '');
+  if (email === null) return;
+  email = email.trim();
+  if (!email || !email.includes('@')) {
+    alert('Sila masukkan alamat email yang sah.');
+    return;
+  }
+
+  if (!confirm('Hantar ' + type + ' ke ' + email + '?')) return;
+
+  var btn = event.target;
+  var originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Menghantar...';
+
+  var formData = new FormData();
+  formData.append('type', type);
+  formData.append('id', id);
+  formData.append('email', email);
+
+  fetch('send-document.php', {
+    method: 'POST',
+    body: formData
+  })
+  .then(function(resp) { return resp.json(); })
+  .then(function(data) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    if (data.success) {
+      alert(data.message);
+      if (type === 'quotation') {
+        location.reload();
+      }
+    } else {
+      alert('Gagal: ' + (data.message || 'Ralat tidak diketahui'));
+    }
+  })
+  .catch(function(err) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    alert('Ralat sambungan. Sila cuba lagi.');
+  });
+}
