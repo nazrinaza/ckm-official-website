@@ -90,15 +90,27 @@ try {
     error_log('CKM DB error: ' . $e->getMessage());
 }
 
-/* ── Send emails via Zoho Mail SMTP ── */
+/* ── Send emails via PHP mail() (cPanel Exim MTA) ── */
+/* Note: Hosting intercepts outbound SMTP (port 25/587 -> local Exim),
+   so direct Zoho SMTP is impossible. PHP mail() via Exim is the only option.
+   Requires SPF record to include server IP 103.191.76.66. */
 $adminEmailSent = false;
 $ackEmailSent   = false;
 
-if ($smtpUser !== '' && $smtpPass !== '' && filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
-    require_once __DIR__ . '/smtp.php';
+if ($smtpUser !== '' && filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
 
     $safe = static fn(string $value): string =>
         htmlspecialchars($value !== '' ? $value : 'Tidak dinyatakan', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    $mailHeaders = [
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        'From: ' . $fromName . ' <' . $smtpUser . '>',
+        'Reply-To: ' . $fromName . ' <' . $smtpUser . '>',
+        'X-Mailer: CKM-Website/1.0',
+    ];
+    $headerStr = implode("\r\n", $mailHeaders);
+    $envelopeSender = '-f ' . $smtpUser;
 
     /* ── Email 1: Notification to CKM admin ── */
     $adminSubject = 'Enquiry Lawatan Tapak cucikarpetmasjid.com — ' . $premise;
@@ -118,11 +130,10 @@ if ($smtpUser !== '' && $smtpPass !== '' && filter_var($toEmail, FILTER_VALIDATE
   <tr><td><strong>Catatan</strong></td><td>' . nl2br($safe($message)) . '</td></tr>
 </table>';
 
-    try {
-        $smtp = new CkmSmtp($smtpHost, $smtpPort, $smtpUser, $smtpPass);
-        $adminEmailSent = $smtp->send($toEmail, $adminSubject, $adminHtml, $fromName);
-    } catch (Exception $e) {
-        error_log('CKM SMTP admin email error: ' . $e->getMessage());
+    $encodedAdminSub = '=?UTF-8?B?' . base64_encode($adminSubject) . '?=';
+    $adminEmailSent = @mail($toEmail, $encodedAdminSub, $adminHtml, $headerStr, $envelopeSender);
+    if (!$adminEmailSent) {
+        error_log('CKM mail() admin email failed: ' . (error_get_last()['message'] ?? 'unknown'));
     }
 
     /* ── Email 2: Acknowledgement to customer (if email provided) ── */
@@ -152,11 +163,10 @@ if ($smtpUser !== '' && $smtpPass !== '' && filter_var($toEmail, FILTER_VALIDATE
   </div>
 </div>';
 
-        try {
-            $smtp2 = new CkmSmtp($smtpHost, $smtpPort, $smtpUser, $smtpPass);
-            $ackEmailSent = $smtp2->send($email, $ackSubject, $ackHtml, $fromName);
-        } catch (Exception $e) {
-            error_log('CKM SMTP acknowledgement email error: ' . $e->getMessage());
+        $encodedAckSub = '=?UTF-8?B?' . base64_encode($ackSubject) . '?=';
+        $ackEmailSent = @mail($email, $encodedAckSub, $ackHtml, $headerStr, $envelopeSender);
+        if (!$ackEmailSent) {
+            error_log('CKM mail() ack email failed: ' . (error_get_last()['message'] ?? 'unknown'));
         }
     }
 }
