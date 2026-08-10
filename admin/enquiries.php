@@ -38,7 +38,7 @@ $stmt = $pdo->prepare("SELECT * FROM enquiries {$clause} ORDER BY created_at DES
 $stmt->execute($params);
 $enquiries = $stmt->fetchAll();
 
-$statuses = ['new'=>'Baru','contacted'=>'Dihubungi','quoted'=>'Dipetik','won'=>'Menang','lost'=>'Hilang','archived'=>'Arkib'];
+$statuses = ['new'=>'Baru','contacted'=>'Dihubungi','quoted'=>'Quoted','won'=>'Menang','lost'=>'Hilang','archived'=>'Arkib'];
 
 $pageTitle = 'Enquiry';
 include __DIR__ . '/header.php';
