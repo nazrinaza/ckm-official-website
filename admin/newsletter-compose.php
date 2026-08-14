@@ -86,6 +86,70 @@ if ($sendMode && $campaign && $campaign['status'] === 'draft') {
     $apiKey = $config['RESEND_API_KEY'] ?? getenv('RESEND_API_KEY') ?: '';
     $fromEmail = $config['RESEND_FROM_EMAIL'] ?? 'jom@cucikarpetmasjid.com';
     $fromName = $config['RESEND_FROM_NAME'] ?? 'cucikarpetmasjid.com';
+    $isStaging = !empty($config['IS_STAGING']);
+    $stagingTestEmail = $config['STAGING_TEST_EMAIL'] ?? ($admin['email'] ?? 'admin@cucikarpetmasjid.com');
+
+    // STAGING SAFETY: If IS_STAGING is true, redirect ALL sends to test email
+    if ($isStaging) {
+        $apiKey = $config['RESEND_API_KEY'] ?? ''; // still need key to send test
+        // Override: send only to test email, not real subscribers
+        $realSubs = $pdo->query("SELECT id, email, name FROM newsletter_subscribers WHERE status='active' ORDER BY id")->fetchAll();
+        $totalRecipients = count($realSubs);
+
+        if ($totalRecipients === 0) {
+            $message = 'Tiada subscriber aktif.';
+            $messageType = 'error';
+        } else {
+            // Mark campaign as sending
+            $pdo->prepare("UPDATE newsletter_campaigns SET status='sending', total_recipients=? WHERE id=?")
+                ->execute([$totalRecipients, $campaignId]);
+
+            // Create send records
+            $insertSend = $pdo->prepare("INSERT INTO newsletter_sends (campaign_id, subscriber_id, status) VALUES (?, ?, 'pending')");
+            foreach ($realSubs as $s) {
+                $insertSend->execute([$campaignId, (int)$s['id']]);
+            }
+
+            // Build email HTML
+            $unsubBase = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+                . '://' . ($_SERVER['HTTP_HOST'] ?? 'cucikarpetmasjid.com');
+            $emailHtml = newsletter_email_template($subject, $body, $unsubBase);
+
+            $resend = new CkmResend($apiKey, $fromEmail, $fromName);
+            $sent = 0;
+            $failed = 0;
+
+            // STAGING: Send only to test email (once), mark all others as "sent (staging)"
+            $testBody = str_replace(
+                ['{name}', '{email}', '{unsub_link}'],
+                ['[STAGING TEST]', $stagingTestEmail, $unsubBase . '/unsubscribe.php?email=test&c=' . $campaignId],
+                $emailHtml
+            );
+            $ok = $resend->send($stagingTestEmail, '[STAGING] ' . $subject, $testBody);
+
+            // Mark all records
+            $now = date('Y-m-d H:i:s');
+            if ($ok) {
+                $sent = $totalRecipients; // count as "would have sent"
+                $pdo->prepare("UPDATE newsletter_sends SET status='sent', sent_at=? WHERE campaign_id=?")
+                    ->execute([$now, $campaignId]);
+            } else {
+                $failed = $totalRecipients;
+                $pdo->prepare("UPDATE newsletter_sends SET status='failed', error_msg='Staging test send failed', sent_at=? WHERE campaign_id=?")
+                    ->execute([$now, $campaignId]);
+            }
+
+            $pdo->prepare("UPDATE newsletter_campaigns SET status='sent', total_sent=?, total_failed=?, sent_at=? WHERE id=?")
+                ->execute([$sent, $failed, $now, $campaignId]);
+
+            $message = "[STAGING] Newsletter test dihantar ke {$stagingTestEmail}. Simulasi: {$sent}/{$totalRecipients} berjaya. Tiada email sebenar dihantar ke subscriber.";
+            $messageType = 'success';
+        }
+        // Skip real sending
+        goto skip_real_send;
+    }
+
+    // ── REAL SEND (production only) ──
 
     if ($apiKey === '') {
         $message = 'Resend API key tiada. Konfigurasi di config.php.';
@@ -175,6 +239,9 @@ if ($sendMode && $campaign && $campaign['status'] === 'draft') {
             } catch (Exception $e2) {}
         }
     }
+}
+
+skip_real_send:
 }
 
 /**
