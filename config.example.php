@@ -5,13 +5,6 @@
  * Jangan kongsi API keys atau masukkan ke JavaScript.
  */
 return [
-    // ── Staging Mode ──
-    // Set IS_STAGING = true pada config.php di staging subdomain.
-    // Ini halang newsletter dari hantar ke subscriber sebenar.
-    // Semua test send akan dihantar ke STAGING_TEST_EMAIL sahaja.
-    'IS_STAGING'       => false,
-    'STAGING_TEST_EMAIL' => 'bell@cucikarpetmasjid.com',
-
     // Resend Email API (HTTP API, port 443 — bypass hosting SMTP block)
     // Dapatkan API key di https://resend.com/api-keys
     // Verify domain di https://resend.com/domains
