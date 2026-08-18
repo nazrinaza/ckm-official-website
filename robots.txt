@@ -1,0 +1,13 @@
+# cucikarpetmasjid.com — robots.txt
+# Benarkan semua search engine crawl
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /staging/admin/
+Disallow: /config.php
+Disallow: /smtp.php
+Disallow: /resend.php
+
+# Sitemap
+Sitemap: https://cucikarpetmasjid.com/sitemap.xml

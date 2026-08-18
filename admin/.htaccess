@@ -1,0 +1,18 @@
+# Protect admin directory
+# Block direct access to config files and includes
+<FilesMatch "\.(env|sql|md|txt)$">
+  Require all denied
+</FilesMatch>
+
+# Prevent directory listing
+Options -Indexes
+
+# Protect config.php from web access
+<Files "config.php">
+  Require all denied
+</Files>
+
+# Protect database.php and auth.php from direct access
+<FilesMatch "^(database|auth|header|footer)\.php$">
+  Require all denied
+</FilesMatch>
